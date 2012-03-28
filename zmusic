@@ -7,7 +7,7 @@ use LWP::Simple;
 use strict;
 use warnings;
 
-my $hsh = 'c1844e4ffa';
+my $hsh = '';
 
 sub updateHsh () {
 	my $ua = LWP::UserAgent->new();
@@ -24,9 +24,7 @@ sub updateHsh () {
 			'X-Requested-With' => 'XMLHttpRequest';
 	my $res = $ua->request($req);
 	my $content = $res->content;
-	print "=======================\n$content\n==========================\n";
 	if ($content =~ /var hsh="([^"]+)"/) {
-		print "hsh = $hsh\n";
 		$hsh = $1;
 	} else {
 		die "Не удалось получить hsh из lang.js\n";
