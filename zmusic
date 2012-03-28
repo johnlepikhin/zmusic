@@ -1,0 +1,105 @@
+#!/usr/bin/perl
+
+use HTTP::Request::Common qw(GET POST);
+use LWP::UserAgent;
+use LWP::Simple;
+
+use strict;
+use warnings;
+
+my $hsh = 'c1844e4ffa';
+
+sub updateHsh () {
+	my $ua = LWP::UserAgent->new();
+	my $req = GET 'http://z-music.org/theme/new/js/lang.js',
+			'Accept' => '*/*',
+			'Accept-Language' => 'ru,ru-ru;q=0.8,en-us;q=0.5,en;q=0.3',
+			'Cache-Control' => 'no-cache',
+			'Connection' => 'keep-alive',
+			'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+			'Cookie' => 'lang=ru; volume=80; session=039481ff229f9c361ceb296a86762c7e; PHPSESSID=kadqin94p0o9jboai3evb20j50; _ym_visorc=w',
+		 	'Pragma' => 'no-cache',
+			'Referer' => 'http://z-music.org/',
+			'User-Agent' => 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:10.0) Gecko/20100101 Firefox/10.0',
+			'X-Requested-With' => 'XMLHttpRequest';
+	my $res = $ua->request($req);
+	my $content = $res->content;
+	print "=======================\n$content\n==========================\n";
+	if ($content =~ /var hsh="([^"]+)"/) {
+		print "hsh = $hsh\n";
+		$hsh = $1;
+	} else {
+		die "Не удалось получить hsh из lang.js\n";
+	}
+}
+
+sub getArtistList ($) {
+	my @r;
+	my $html = get("http://z-music.org/search/?q=$_[0]/");
+	while ($html =~ /\G.*?<li class="track">(.*?)<\/li>/g) {
+		my $content = $1;
+		$content =~ /data-aid="([^"]+)"/;
+		my $id = $1;
+		$content =~ /<b class="artist">(.*?)<\/b>/;
+		my $artist = $1;
+		$content =~ /<span class="name">(.*?)<\/span>/;
+		my $title = $1;
+
+		push @r, [$id, $artist, $title];
+	}
+
+	return \@r;
+}
+
+sub startPlay ($) {
+	updateHsh ();
+	my $ua = LWP::UserAgent->new();
+	my $req = POST 'http://z-music.org/service/',
+			'Accept' => '*/*',
+			'Accept-Language' => 'ru,ru-ru;q=0.8,en-us;q=0.5,en;q=0.3',
+			'Cache-Control' => 'no-cache',
+			'Connection' => 'keep-alive',
+			'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+			'Cookie' => 'lang=ru; volume=80; session=039481ff229f9c361ceb296a86762c7e; PHPSESSID=kadqin94p0o9jboai3evb20j50; _ym_visorc=w',
+		 	'Pragma' => 'no-cache',
+			'Referer' => 'http://z-music.org/',
+			'User-Agent' => 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:10.0) Gecko/20100101 Firefox/10.0',
+			'X-Requested-With' => 'XMLHttpRequest',
+			Content => [
+				artist => $_->[1],
+				title => $_->[2],
+				action => 'startplay'
+			];
+	my $res = $ua->request($req);
+	my $s = $res->as_string;
+	my $content = $res->content;
+}
+
+sub download ($) {
+	my $r = getArtistList ($_[0]);
+	foreach (@$r) {
+		startPlay ($_);
+		`wget -cO '$_->[1] - $_->[2].mp3' 'http://149.255.38.167/t/$_->[0]_$hsh/'`;
+	}
+}
+
+sub play ($) {
+	my $r = getArtistList ($_[0]);
+	foreach (@$r) {
+		startPlay ($_);
+		print "==== $_->[1] - $_->[2]\n";
+		`mplayer 'http://149.255.38.167/t/$_->[0]_$hsh/' 2>/dev/null`;
+	}
+}
+
+if (@ARGV == 2) {
+	if ($ARGV[0] eq 'play') {
+		play ($ARGV[1]);
+	} elsif ($ARGV[0] eq 'download') {
+		download ($ARGV[1]);
+	} else {
+		die "Неизвестная команда: $ARGV[0]\n";
+	}
+} else {
+	die "Недостаточно аргументов"
+}

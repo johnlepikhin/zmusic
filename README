@@ -1,0 +1,11 @@
+Tools for z-music.org project
+
+$ zmusic download 'keyword'        -- download into current directory all mp3s found by keyword
+$ zmusic play 'keyword'            -- play
+
+Requirements:
+
+perl
+perl-lwp
+wget
+mplayer
