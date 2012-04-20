@@ -31,22 +31,43 @@ sub updateHsh () {
 	}
 }
 
-sub getArtistList ($) {
+sub getList ($$) {
 	my @r;
-	my $html = get("http://z-music.org/search/?q=$_[0]/");
-	while ($html =~ /\G.*?<li class="track">(.*?)<\/li>/g) {
-		my $content = $1;
-		$content =~ /data-aid="([^"]+)"/;
-		my $id = $1;
-		$content =~ /<b class="artist">(.*?)<\/b>/;
-		my $artist = $1;
-		$content =~ /<span class="name">(.*?)<\/span>/;
-		my $title = $1;
-
-		push @r, [$id, $artist, $title];
+	my $page = 1;
+	while (1) {
+		my $added = 0;
+		print "getting page $page\n";
+		my $html = get("$_[0]&page=$page");
+		while ($html =~ /\G.*?<li class="track">(.*?)<\/li>/g) {
+			my $content = $1;
+			$content =~ /data-aid="([^"]+)"/;
+			my $id = $1;
+			$content =~ /<b class="artist">(.*?)<\/b>/;
+			my $artist = $1;
+			$content =~ /<span class="name">(.*?)<\/span>/;
+			my $title = $1;
+	
+			push @r, [$id, $artist, $title];
+			$added ++;
+		}
+		goto norec if !$added || !$_[1];
+		$page ++;
 	}
+norec:
 
 	return \@r;
+}
+
+sub getSearchList ($) {
+	return getList ("http://z-music.org/search/?q=$_[0]", 1);
+}
+
+sub getArtistList ($) {
+	return getList ("http://z-music.org/artist/$_[0]/?", 0);
+}
+
+sub getAlbumList ($$) {
+	return getList ("http://z-music.org/artist/$_[0]/$_[1]/?", 0);
 }
 
 sub startPlay ($) {
@@ -74,30 +95,47 @@ sub startPlay ($) {
 }
 
 sub download ($) {
-	my $r = getArtistList ($_[0]);
+	my $r = $_[0]->();
+	my $i = 0;
 	foreach (@$r) {
 		startPlay ($_);
-		`wget -cO '$_->[1] - $_->[2].mp3' 'http://149.255.38.167/t/$_->[0]_$hsh/'`;
+		my $id = sprintf "%04i", $i;
+		`wget -cO '$id $_->[1] - $_->[2].mp3' 'http://149.255.38.167/t/$_->[0]_$hsh/'`;
+		$i++;
 	}
 }
 
 sub play ($) {
-	my $r = getArtistList ($_[0]);
+	my $r = $_[0]->();
 	foreach (@$r) {
 		startPlay ($_);
 		print "==== $_->[1] - $_->[2]\n";
-		`mplayer 'http://149.255.38.167/t/$_->[0]_$hsh/' >/dev/null 2>/dev/null`;
+		`mplayer -cache 512 -cache-min 50 'http://149.255.38.167/t/$_->[0]_$hsh/' 2>/dev/null`;
 	}
 }
 
-if (@ARGV == 2) {
-	if ($ARGV[0] eq 'play') {
-		play ($ARGV[1]);
-	} elsif ($ARGV[0] eq 'download') {
-		download ($ARGV[1]);
-	} else {
-		die "Неизвестная команда: $ARGV[0]\n";
-	}
-} else {
+my $getter;
+if (@ARGV < 3) {
 	die "Недостаточно аргументов"
+}
+
+if ($ARGV[1] eq 'search') {
+	$getter = sub () { return getSearchList ($ARGV[2]) };
+} elsif ($ARGV[1] eq 'artist') {
+	$getter = sub () { return getArtistList ($ARGV[2]) };
+} elsif ($ARGV[1] eq 'album') {
+	if (@ARGV < 4) {
+		die "Не указан альбом"
+	}
+	$getter = sub () { return getAlbumList ($ARGV[2], $ARGV[3]) };
+} else {
+	die "Неизвестный тип поиска '$ARGV[2]'"
+}
+
+if ($ARGV[0] eq 'play') {
+	play ($getter);
+} elsif ($ARGV[0] eq 'download') {
+	download ($getter);
+} else {
+	die "Неизвестная команда: $ARGV[0]\n";
 }

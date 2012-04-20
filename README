@@ -1,7 +1,15 @@
 Tools for z-music.org project
 
-$ zmusic download 'keyword'        -- download into current directory all mp3s found by keyword
-$ zmusic play 'keyword'            -- play
+$ zmusic download search 'keyword'                 -- download into current directory all mp3s found by keyword
+$ zmusic play search 'keyword'                     -- play
+
+$ zmusic download artist 'artist name'             -- download into current directory all mp3s of the artist
+$ zmusic play artist 'artist name'                 -- play
+
+$ zmusic download album 'artist name' 'album name' -- download into current directory all mp3s from the album
+$ zmusic play album 'artist name' 'album name'     -- play
+
+NOTE: artist name and album name are case sensivitive! The must be specified exatly as on the website.
 
 Requirements:
 
