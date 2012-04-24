@@ -11,7 +11,7 @@ my $hsh = '';
 
 sub updateHsh () {
 	my $ua = LWP::UserAgent->new();
-	my $req = GET 'http://z-music.org/theme/new/js/lang.js',
+	my $req = GET 'http://z-music.org/theme/new/js/lang',
 			'Accept' => '*/*',
 			'Accept-Language' => 'ru,ru-ru;q=0.8,en-us;q=0.5,en;q=0.3',
 			'Cache-Control' => 'no-cache',
@@ -27,7 +27,7 @@ sub updateHsh () {
 	if ($content =~ /var hsh="([^"]+)"/) {
 		$hsh = $1;
 	} else {
-		die "Не удалось получить hsh из lang.js\n";
+		die "Не удалось получить hsh из lang\n";
 	}
 }
 
